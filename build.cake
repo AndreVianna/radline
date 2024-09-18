@@ -5,7 +5,7 @@ var configuration = Argument("configuration", "Release");
 // Tasks
 
 Task("Build")
-    .Does(context => 
+    .Does(context =>
 {
     DotNetBuild("./src/RadLine.sln", new DotNetBuildSettings {
         Configuration = configuration,
@@ -17,7 +17,7 @@ Task("Build")
 
 Task("Test")
     .IsDependentOn("Build")
-    .Does(context => 
+    .Does(context =>
 {
     DotNetTest("./src/RadLine.Tests/RadLine.Tests.csproj", new DotNetTestSettings {
         Configuration = configuration,
@@ -28,7 +28,7 @@ Task("Test")
 
 Task("Package")
     .IsDependentOn("Test")
-    .Does(context => 
+    .Does(context =>
 {
     context.CleanDirectory("./.artifacts");
 
@@ -42,24 +42,18 @@ Task("Package")
     });
 });
 
-Task("Publish-NuGet")
+Task("Publish-Local")
     .WithCriteria(ctx => BuildSystem.IsRunningOnGitHubActions, "Not running on GitHub Actions")
     .IsDependentOn("Package")
-    .Does(context => 
+    .Does(context =>
 {
-    var apiKey = Argument<string>("nuget-key", null);
-    if(string.IsNullOrWhiteSpace(apiKey)) {
-        throw new CakeException("No NuGet API key was provided.");
-    }
-
     // Publish to GitHub Packages
-    foreach(var file in context.GetFiles("./.artifacts/*.nupkg")) 
+    foreach(var file in context.GetFiles("./.artifacts/*.nupkg"))
     {
         context.Information("Publishing {0}...", file.GetFilename().FullPath);
         DotNetNuGetPush(file.FullPath, new DotNetNuGetPushSettings
         {
-            Source = "https://api.nuget.org/v3/index.json",
-            ApiKey = apiKey,
+            Source = "c:/nuget/packages",
         });
     }
 });
@@ -68,7 +62,7 @@ Task("Publish-NuGet")
 // Targets
 
 Task("Publish")
-    .IsDependentOn("Publish-NuGet");
+    .IsDependentOn("Publish-Local");
 
 Task("Default")
     .IsDependentOn("Package");
