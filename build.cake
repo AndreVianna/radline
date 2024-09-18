@@ -43,7 +43,6 @@ Task("Package")
 });
 
 Task("Publish-Local")
-    .WithCriteria(ctx => BuildSystem.IsRunningOnGitHubActions, "Not running on GitHub Actions")
     .IsDependentOn("Package")
     .Does(context =>
 {
