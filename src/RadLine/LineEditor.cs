@@ -26,7 +26,7 @@ namespace RadLine
         public Func<string, ValidationResult>? Validator { get; init; }
         public ILineEditorHistory History => _history;
         public ExitState Result { get; private set; }
-        public string? ErrorMessage { get; private set; }
+        public string ErrorMessage { get; private set; } = string.Empty;
 
         public ILineDecorationRenderer? LineDecorationRenderer { get; init; }
 
@@ -82,7 +82,7 @@ namespace RadLine
                     var validationResult = Validator?.Invoke(state.Text) ?? ValidationResult.Success();
                     if (!validationResult.Successful)
                     {
-                        ErrorMessage = validationResult.Message;
+                        ErrorMessage = validationResult.Message ?? string.Empty;
                         Result = ExitState.Invalid;
                     }
 
