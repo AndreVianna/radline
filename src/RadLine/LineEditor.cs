@@ -10,7 +10,6 @@ namespace RadLine
 {
     public sealed class LineEditor : IHighlighterAccessor
     {
-        private readonly IInputSource _source;
         private readonly IServiceProvider? _provider;
         private readonly IAnsiConsole _console;
         private readonly LineEditorRenderer _renderer;
@@ -24,18 +23,20 @@ namespace RadLine
         public ILineEditorPrompt Prompt { get; init; } = new LineEditorPrompt("[yellow]>[/]");
         public ITextCompletion? Completion { get; init; }
         public IHighlighter? Highlighter { get; init; }
+        public Func<string, ValidationResult>? Validator { get; init; }
         public ILineEditorHistory History => _history;
+        public ExitState Result { get; private set; }
+        public string? ErrorMessage { get; private set; }
 
         public ILineDecorationRenderer? LineDecorationRenderer { get; init; }
 
         public LineEditor(IAnsiConsole? terminal = null, IInputSource? source = null, IServiceProvider? provider = null)
         {
             _console = terminal ?? AnsiConsole.Console;
-            _source = source ?? new DefaultInputSource(_console);
             _provider = provider;
             _renderer = new LineEditorRenderer(_console, this);
             _history = new LineEditorHistory();
-            _input = new InputBuffer(_source);
+            _input = new InputBuffer(source ?? new DefaultInputSource(_console));
 
             KeyBindings = new KeyBindings();
             KeyBindings.AddDefault();
@@ -70,10 +71,21 @@ namespace RadLine
                 if (result.Result == SubmitAction.Cancel)
                 {
                     cancelled = true;
+                    Result = ExitState.Cancel;
+
+                    // ignore validation.
                     break;
                 }
                 else if (result.Result == SubmitAction.Submit)
                 {
+                    Result = ExitState.Ok;
+                    var validationResult = Validator?.Invoke(state.Text) ?? ValidationResult.Success();
+                    if (!validationResult.Successful)
+                    {
+                        ErrorMessage = validationResult.Message;
+                        Result = ExitState.Invalid;
+                    }
+
                     break;
                 }
                 else if (result.Result == SubmitAction.PreviousHistory)
