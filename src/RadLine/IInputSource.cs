@@ -1,12 +1,9 @@
-using System;
+namespace RadLine;
 
-namespace RadLine
-{
-    public interface IInputSource
-    {
-        bool ByPassProcessing { get; }
+public interface IInputSource {
+    bool ByPassProcessing { get; }
 
-        bool IsKeyAvailable();
-        ConsoleKeyInfo ReadKey();
-    }
+    bool IsKeyAvailable();
+
+    ConsoleKeyInfo ReadKey();
 }

@@ -1,8 +1,7 @@
-namespace RadLine
-{
-    public enum AutoComplete
-    {
-        Next,
-        Previous,
-    }
+namespace RadLine;
+
+public enum AutoComplete {
+    Next,
+
+    Previous,
 }

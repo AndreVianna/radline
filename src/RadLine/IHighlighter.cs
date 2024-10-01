@@ -1,9 +1,5 @@
-using Spectre.Console.Rendering;
+namespace RadLine;
 
-namespace RadLine
-{
-    public interface IHighlighter
-    {
-        IRenderable BuildHighlightedText(string text);
-    }
+public interface IHighlighter {
+    IRenderable BuildHighlightedText(string text);
 }

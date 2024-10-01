@@ -1,35 +1,7 @@
-namespace RadLine
-{
-    internal static class IntExtensions
-    {
-        public static int Clamp(this int value, int min, int max)
-        {
-            if (value < min)
-            {
-                return min;
-            }
+namespace RadLine.Internal.Extensions;
 
-            if (value > max)
-            {
-                return max;
-            }
+internal static class IntExtensions {
+    public static int Clamp(this int value, int min, int max) => value < min ? min : value > max ? max : value;
 
-            return value;
-        }
-
-        public static int WrapAround(this int value, int min, int max)
-        {
-            if (value < min)
-            {
-                return max;
-            }
-
-            if (value > max)
-            {
-                return min;
-            }
-
-            return value;
-        }
-    }
+    public static int WrapAround(this int value, int min, int max) => value < min ? max : value > max ? min : value;
 }

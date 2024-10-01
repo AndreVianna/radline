@@ -1,10 +1,8 @@
-namespace RadLine;
+namespace RadLine.Commands;
 
-public sealed class CancelCommand : LineEditorCommand
-{
-    public override void Execute(LineEditorContext context)
-    {
-        context.Buffer.Reset();
-        context.Submit(SubmitAction.Cancel);
+public sealed class CancelCommand : TextEditorCommand {
+    public override void Execute(LineBufferContext lineBufferContext) {
+        lineBufferContext.Buffer.Reset();
+        lineBufferContext.Submit(SubmitAction.Cancel);
     }
 }

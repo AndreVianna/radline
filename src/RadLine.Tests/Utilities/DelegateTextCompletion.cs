@@ -1,26 +1,12 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
+namespace RadLine.Utilities;
 
-namespace RadLine.Tests.Utilities
+public sealed class DelegateTextCompletion(Func<string, string, string, IEnumerable<string>?> callback) : ITextCompletion
 {
-    public sealed class DelegateTextCompletion : ITextCompletion
+    private readonly Func<string, string, string, IEnumerable<string>?> _callback = callback ?? throw new ArgumentNullException(nameof(callback));
+
+    public IEnumerable<string>? GetCompletions(string context, string word, string suffix) => _callback switch
     {
-        private readonly Func<string, string, string, IEnumerable<string>?> _callback;
-
-        public DelegateTextCompletion(Func<string, string, string, IEnumerable<string>?> callback)
-        {
-            _callback = callback ?? throw new ArgumentNullException(nameof(callback));
-        }
-
-        public IEnumerable<string>? GetCompletions(string context, string word, string suffix)
-        {
-            if (_callback == null)
-            {
-                return Enumerable.Empty<string>();
-            }
-
-            return _callback(context, word, suffix);
-        }
-    }
+        null => [],
+        _ => _callback(context, word, suffix),
+    };
 }

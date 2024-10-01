@@ -1,24 +1,5 @@
-using System;
+namespace RadLine.Commands.Cursor;
 
-namespace RadLine
-{
-    public sealed class MoveRightCommand : LineEditorCommand
-    {
-        private readonly int _count;
-
-        public MoveRightCommand()
-        {
-            _count = 1;
-        }
-
-        public MoveRightCommand(int count)
-        {
-            _count = Math.Max(0, count);
-        }
-
-        public override void Execute(LineEditorContext context)
-        {
-            context.Buffer.MoveRight(_count);
-        }
-    }
+public sealed class MoveRightCommand : TextEditorCommand {
+    public override void Execute(LineBufferContext lineBufferContext) => lineBufferContext.Submit(SubmitAction.MoveRight);
 }

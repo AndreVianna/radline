@@ -1,10 +1,5 @@
-namespace RadLine
-{
-    public sealed class PreviousHistoryCommand : LineEditorCommand
-    {
-        public override void Execute(LineEditorContext context)
-        {
-            context.Submit(SubmitAction.PreviousHistory);
-        }
-    }
+namespace RadLine.Commands;
+
+public sealed class PreviousHistoryCommand : TextEditorCommand {
+    public override void Execute(LineBufferContext lineBufferContext) => lineBufferContext.Submit(SubmitAction.PreviousHistory);
 }

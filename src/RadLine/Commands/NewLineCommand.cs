@@ -1,10 +1,5 @@
-namespace RadLine
-{
-    public sealed class NewLineCommand : LineEditorCommand
-    {
-        public override void Execute(LineEditorContext context)
-        {
-            context.Submit(SubmitAction.NewLine);
-        }
-    }
+namespace RadLine.Commands;
+
+public sealed class NewLineCommand : TextEditorCommand {
+    public override void Execute(LineBufferContext lineBufferContext) => lineBufferContext.Submit(SubmitAction.NewLine);
 }

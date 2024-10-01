@@ -1,11 +1,11 @@
 var target = Argument("target", "Default");
-var configuration = Argument("configuration", "Release");
+var configuration = Argument("configuration", "Debug");
 
 ////////////////////////////////////////////////////////////////
 // Tasks
 
 Task("Build")
-    .Does(context => 
+    .Does(context =>
 {
     DotNetBuild("./src/RadLine.sln", new DotNetBuildSettings {
         Configuration = configuration,
@@ -17,7 +17,7 @@ Task("Build")
 
 Task("Test")
     .IsDependentOn("Build")
-    .Does(context => 
+    .Does(context =>
 {
     DotNetTest("./src/RadLine.Tests/RadLine.Tests.csproj", new DotNetTestSettings {
         Configuration = configuration,
@@ -28,7 +28,7 @@ Task("Test")
 
 Task("Package")
     .IsDependentOn("Test")
-    .Does(context => 
+    .Does(context =>
 {
     context.CleanDirectory("./.artifacts");
 
@@ -43,23 +43,24 @@ Task("Package")
 });
 
 Task("Publish-NuGet")
-    .WithCriteria(ctx => BuildSystem.IsRunningOnGitHubActions, "Not running on GitHub Actions")
     .IsDependentOn("Package")
-    .Does(context => 
+    .Does(context =>
 {
-    var apiKey = Argument<string>("nuget-key", null);
-    if(string.IsNullOrWhiteSpace(apiKey)) {
-        throw new CakeException("No NuGet API key was provided.");
-    }
-
     // Publish to GitHub Packages
-    foreach(var file in context.GetFiles("./.artifacts/*.nupkg")) 
+    foreach(var file in context.GetFiles("./.artifacts/*.nupkg"))
     {
+        EnsureDirectoryDoesNotExist("C:/Nuget/packages/radline/" + file.GetFilename().GetFilenameWithoutExtension().ToString()[8..], new DeleteDirectorySettings {
+            Recursive = true,
+            Force = true,
+        });
+        EnsureDirectoryDoesNotExist(EnvironmentVariable("USERPROFILE") + "/.nuget/packages/radline/" + file.GetFilename().GetFilenameWithoutExtension().ToString()[8..], new DeleteDirectorySettings {
+            Recursive = true,
+            Force = true
+        });
         context.Information("Publishing {0}...", file.GetFilename().FullPath);
         DotNetNuGetPush(file.FullPath, new DotNetNuGetPushSettings
         {
-            Source = "https://api.nuget.org/v3/index.json",
-            ApiKey = apiKey,
+            Source = "C:/Nuget/Packages",
         });
     }
 });

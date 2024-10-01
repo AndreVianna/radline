@@ -1,10 +1,5 @@
-namespace RadLine
-{
-    public sealed class SubmitCommand : LineEditorCommand
-    {
-        public override void Execute(LineEditorContext context)
-        {
-            context.Submit(SubmitAction.Submit);
-        }
-    }
+namespace RadLine.Commands;
+
+public sealed class SubmitCommand : TextEditorCommand {
+    public override void Execute(LineBufferContext lineBufferContext) => lineBufferContext.Submit(SubmitAction.Submit);
 }

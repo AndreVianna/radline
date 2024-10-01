@@ -1,14 +1,10 @@
-namespace RadLine
-{
-    public sealed class BackspaceCommand : LineEditorCommand
-    {
-        public override void Execute(LineEditorContext context)
-        {
-            var removed = context.Buffer.Clear(context.Buffer.Position - 1, 1);
-            if (removed == 1)
-            {
-                context.Buffer.Move(context.Buffer.Position - 1);
-            }
+namespace RadLine.Commands;
+
+public sealed class BackspaceCommand : TextEditorCommand {
+    public override void Execute(LineBufferContext lineBufferContext) {
+        var removed = lineBufferContext.Buffer.Clear(lineBufferContext.Buffer.Position - 1, 1);
+        if (removed == 1) {
+            lineBufferContext.Buffer.SetPosition(lineBufferContext.Buffer.Position - 1);
         }
     }
 }

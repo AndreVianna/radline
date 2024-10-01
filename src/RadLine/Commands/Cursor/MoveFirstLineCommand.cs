@@ -1,10 +1,5 @@
-﻿namespace RadLine
-{
-    public sealed class MoveFirstLineCommand : LineEditorCommand
-    {
-        public override void Execute(LineEditorContext context)
-        {
-            context.Submit(SubmitAction.MoveFirst);
-        }
-    }
+namespace RadLine.Commands.Cursor;
+
+public sealed class MoveFirstLineCommand : TextEditorCommand {
+    public override void Execute(LineBufferContext lineBufferContext) => lineBufferContext.Submit(SubmitAction.MoveTop);
 }

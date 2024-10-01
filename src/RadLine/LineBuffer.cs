@@ -1,182 +1,101 @@
-using System;
-using System.Globalization;
-using System.Linq;
+namespace RadLine;
 
-namespace RadLine
-{
-    public sealed class LineBuffer
-    {
-        private readonly string _initialContent;
-        private string _buffer;
-        private int _position;
+public sealed class LineBuffer {
+    public LineBuffer(string? content = null) {
+        InitialContent = content ?? string.Empty;
+        Content = InitialContent;
+        Position = Content.Length;
+    }
 
-        public int Position => _position;
-        public int Length => _buffer.Length;
-        public string InitialContent => _initialContent;
-        public string Content => _buffer;
+    public LineBuffer(LineBuffer buffer) {
+        ArgumentNullException.ThrowIfNull(buffer);
 
-        public bool AtBeginning => Position == 0;
-        public bool AtEnd => Position == Content.Length;
+        InitialContent = buffer.InitialContent;
+        Content = buffer.Content;
+        Position = Content.Length;
+    }
 
-        public bool IsAtCharacter
-        {
-            get
-            {
-                if (Length == 0)
-                {
-                    return false;
-                }
+    public int Position { get; private set; }
 
-                if (AtEnd)
-                {
-                    return false;
-                }
+    public int Length => Content.Length;
 
-                return !char.IsWhiteSpace(_buffer[_position]);
-            }
+    public string InitialContent { get; }
+
+    public string Content { get; private set; }
+
+    public bool AtBeginning => Position == 0;
+
+    public bool AtEnd => Position == Content.Length;
+
+    public bool IsAtCharacter
+        => Length switch {
+            0 => false,
+            _ when AtEnd => false,
+            _ => !char.IsWhiteSpace(Content[Position]),
+        };
+
+    public bool IsAtBeginningOfWord
+        => Length switch {
+            0 => false,
+            _ when Position is 0 => !char.IsWhiteSpace(Content[0]),
+            _ => char.IsWhiteSpace(Content[Position - 1]),
+        };
+
+    public bool IsAtEndOfWord
+        => Length switch {
+            0 => false,
+            _ when Position is 0 => false,
+            _ => !char.IsWhiteSpace(Content[Position - 1]),
+        };
+
+    // TODO: Right now, this only returns the position in the line buffer.
+    // This is OK for western alphabets and most emojis which consist
+    // of a single surrogate pair, but everything else will be wrong.
+
+    public bool SetPosition(int position) {
+        if (position == Position) return false;
+        var movingLeft = position < Position;
+        Position = MoveToPosition(position, movingLeft);
+        return true;
+    }
+
+    public void Insert(char character) => Content = Content.Insert(Position, character.ToString());
+
+    public void Insert(string text) => Content = Content.Insert(Position, text);
+
+    public void Reset() {
+        Content = InitialContent;
+        Position = Content.Length;
+    }
+
+    public int Clear(int index, int count) {
+        if (index < 0) {
+            return 0;
         }
 
-        public bool IsAtBeginningOfWord
-        {
-            get
-            {
-                if (Length == 0)
-                {
-                    return false;
-                }
-
-                if (_position == 0)
-                {
-                    return !char.IsWhiteSpace(_buffer[0]);
-                }
-
-                return char.IsWhiteSpace(_buffer[_position - 1]);
-            }
+        if (index > Content.Length - 1) {
+            return 0;
         }
 
-        public bool IsAtEndOfWord
-        {
-            get
-            {
-                if (Length == 0)
-                {
-                    return false;
-                }
+        var length = Content.Length;
+        Content = Content.Remove(Math.Max(0, index), Math.Min(count, Content.Length - index));
+        return Math.Max(length - Content.Length, 0);
+    }
 
-                if (_position == 0)
-                {
-                    return false;
-                }
-
-                return !char.IsWhiteSpace(_buffer[_position - 1]);
-            }
+    private int MoveToPosition(int position, bool movingLeft) {
+        if (position <= 0) {
+            return 0;
         }
 
-        // TODO: Right now, this only returns the position in the line buffer.
-        // This is OK for western alphabets and most emojis which consist
-        // of a single surrogate pair, but everything else will be wrong.
-        public int CursorPosition => _position;
-
-        public LineBuffer(string? content = null)
-        {
-            _initialContent = content ?? string.Empty;
-            _buffer = _initialContent;
-            _position = _buffer.Length;
+        if (position >= Content.Length) {
+            return Content.Length;
         }
 
-        public LineBuffer(LineBuffer buffer)
-        {
-            if (buffer is null)
-            {
-                throw new ArgumentNullException(nameof(buffer));
-            }
+        var indices = StringInfo.ParseCombiningCharacters(Content).Cast<int?>();
 
-            _initialContent = buffer.InitialContent;
-            _buffer = buffer.Content;
-            _position = _buffer.Length;
-        }
-
-        public bool Move(int position)
-        {
-            if (position == _position)
-            {
-                return false;
-            }
-
-            var movingLeft = position < _position;
-            _position = MoveToPosition(position, movingLeft);
-
-            return true;
-        }
-
-        public void Insert(char character)
-        {
-            _buffer = _buffer.Insert(_position, character.ToString());
-        }
-
-        public void Insert(string text)
-        {
-            _buffer = _buffer.Insert(_position, text);
-        }
-
-        public void Reset()
-        {
-            _buffer = _initialContent;
-            _position = _buffer.Length;
-        }
-
-        public int Clear(int index, int count)
-        {
-            if (index < 0)
-            {
-                return 0;
-            }
-
-            if (index > _buffer.Length - 1)
-            {
-                return 0;
-            }
-
-            var length = _buffer.Length;
-            _buffer = _buffer.Remove(Math.Max(0, index), Math.Min(count, _buffer.Length - index));
-            return Math.Max(length - _buffer.Length, 0);
-        }
-
-        private int MoveToPosition(int position, bool movingLeft)
-        {
-            if (position <= 0)
-            {
-                return 0;
-            }
-            else if (position >= _buffer.Length)
-            {
-                return _buffer.Length;
-            }
-
-            var indices = StringInfo.ParseCombiningCharacters(_buffer);
-
-            if (movingLeft)
-            {
-                foreach (var e in indices.Reverse())
-                {
-                    if (e <= position)
-                    {
-                        return e;
-                    }
-                }
-            }
-            else
-            {
-                foreach (var e in indices)
-                {
-                    if (e >= position)
-                    {
-                        return e;
-                    }
-                }
-            }
-
-            throw new InvalidOperationException("Could not find position in buffer");
-        }
+        return (movingLeft
+            ? indices.Reverse().FirstOrDefault(e => e <= position)
+            : indices.FirstOrDefault(e => e >= position))
+               ?? throw new InvalidOperationException("Could not find position in buffer");
     }
 }

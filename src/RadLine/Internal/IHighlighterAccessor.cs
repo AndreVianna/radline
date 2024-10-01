@@ -1,7 +1,5 @@
-﻿namespace RadLine
-{
-    internal interface IHighlighterAccessor
-    {
-        IHighlighter? Highlighter { get; }
-    }
+namespace RadLine.Internal;
+
+internal interface IHighlighterAccessor {
+    IHighlighter? Highlighter { get; }
 }

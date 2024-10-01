@@ -4,11 +4,8 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
     <IsPackable>false</IsPackable>
+    <RootNamespace>RadLine.Examples</RootNamespace>
   </PropertyGroup>
-
-  <ItemGroup>
-    <AdditionalFiles Include="..\stylecop.json" Link="Properties/stylecop.json" />
-  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\RadLine\RadLine.csproj" />

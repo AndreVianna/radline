@@ -1,10 +1,5 @@
-namespace RadLine
-{
-    public sealed class MoveDownCommand : LineEditorCommand
-    {
-        public override void Execute(LineEditorContext context)
-        {
-            context.Submit(SubmitAction.MoveDown);
-        }
-    }
+namespace RadLine.Commands.Cursor;
+
+public sealed class MoveDownCommand : TextEditorCommand {
+    public override void Execute(LineBufferContext lineBufferContext) => lineBufferContext.Submit(SubmitAction.MoveDown);
 }
