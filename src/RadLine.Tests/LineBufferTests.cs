@@ -8,10 +8,9 @@ public sealed class LineBufferTests {
             var buffer = new LineBuffer("FOO");
 
             // When
-            var result = buffer.SetPosition(1);
+            buffer.SetPosition(1);
 
             // Then
-            result.ShouldBe(true);
             buffer.Position.ShouldBe(1);
         }
 
@@ -22,10 +21,9 @@ public sealed class LineBufferTests {
             buffer.SetPosition(3);
 
             // When
-            var result = buffer.SetPosition(3);
+            buffer.SetPosition(3);
 
             // Then
-            result.ShouldBe(false);
             buffer.Position.ShouldBe(3);
         }
     }
@@ -258,10 +256,9 @@ public sealed class LineBufferTests {
             buffer.Insert("AB");
 
             // When
-            var result = buffer.Clear(1, 1);
+            buffer.Clear(1, 1);
 
             // Then
-            result.ShouldBe(1);
             buffer.Content.ShouldBe("A");
         }
 
@@ -272,10 +269,9 @@ public sealed class LineBufferTests {
             buffer.Insert("AB");
 
             // When
-            var result = buffer.Clear(3, 1);
+            buffer.Clear(3, 1);
 
             // Then
-            result.ShouldBe(0);
             buffer.Content.ShouldBe("AB");
         }
 
@@ -286,10 +282,9 @@ public sealed class LineBufferTests {
             buffer.Insert("AB");
 
             // When
-            var result = buffer.Clear(1, 3);
+            buffer.Clear(1, 3);
 
             // Then
-            result.ShouldBe(1);
             buffer.Content.ShouldBe("A");
         }
     }

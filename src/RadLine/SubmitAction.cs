@@ -2,6 +2,8 @@ namespace RadLine;
 
 public enum SubmitAction {
     Cancel,
+    Delete,
+    Backspace,
     Submit,
     NewLine,
     MoveLeft,

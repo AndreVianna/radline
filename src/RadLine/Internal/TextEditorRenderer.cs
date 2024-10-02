@@ -3,14 +3,14 @@ namespace RadLine.Internal;
 internal sealed class TextEditorRenderer {
     private readonly IAnsiConsole _console;
 
-    internal LineBuilder LineBuilder { get; }
+    internal ContentHandler ContentHandler { get; }
 
     public TextEditorRenderer(IAnsiConsole console, IHighlighterAccessor accessor) {
         ArgumentNullException.ThrowIfNull(accessor);
 
         _console = console ?? throw new ArgumentNullException(nameof(console));
 
-        LineBuilder = new(_console, accessor);
+        ContentHandler = new(_console, accessor);
 
         if (!_console.Profile.Capabilities.Ansi) {
             throw new NotSupportedException("Terminal does not support ANSI");
@@ -24,7 +24,7 @@ internal sealed class TextEditorRenderer {
 
             var builder = new StringBuilder();
             for (var lineIndex = 0; lineIndex < content.LineCount; lineIndex++) {
-                LineBuilder.BuildLine(builder, content, content.GetBufferAt(lineIndex), lineIndex, 0);
+                ContentHandler.SetLineContent(builder, content, content.GetBufferAt(lineIndex), lineIndex, 0);
 
                 if (lineIndex != content.LineCount - 1) {
                     builder.Append(Environment.NewLine);
@@ -43,15 +43,15 @@ internal sealed class TextEditorRenderer {
         }
     }
 
-    public void Refresh(TextEditorContent content) {
+    public void Refresh(TextEditorContent content, int trailCount = 0) {
         var builder = new StringBuilder();
-        LineBuilder.BuildRefresh(builder, content);
+        ContentHandler.RefreshContent(builder, content, trailCount);
         _console.WriteAnsi(builder.ToString());
     }
 
     public void RenderLine(TextEditorContent content, int? cursorPosition = null) {
         var builder = new StringBuilder();
-        LineBuilder.BuildLine(builder, content, content.Buffer, null, cursorPosition);
+        ContentHandler.SetLineContent(builder, content, content.Buffer, null, cursorPosition);
         _console.WriteAnsi(builder.ToString());
     }
 }

@@ -23,14 +23,17 @@ public sealed class LineBuffer {
 
     public string Content { get; private set; }
 
-    public bool AtBeginning => Position == 0;
+    public bool IsAtBeginning => Position == 0;
 
-    public bool AtEnd => Position == Content.Length;
+    public bool IsAtEnd => Position == Content.Length;
+
+    public (string start, string end) SplitAtCursor()
+        => (Content[..Position], Content[Position..]);
 
     public bool IsAtCharacter
         => Length switch {
             0 => false,
-            _ when AtEnd => false,
+            _ when IsAtEnd => false,
             _ => !char.IsWhiteSpace(Content[Position]),
         };
 
@@ -52,11 +55,9 @@ public sealed class LineBuffer {
     // This is OK for western alphabets and most emojis which consist
     // of a single surrogate pair, but everything else will be wrong.
 
-    public bool SetPosition(int position) {
-        if (position == Position) return false;
+    public void SetPosition(int position) {
         var movingLeft = position < Position;
         Position = MoveToPosition(position, movingLeft);
-        return true;
     }
 
     public void Insert(char character) => Content = Content.Insert(Position, character.ToString());
@@ -68,29 +69,19 @@ public sealed class LineBuffer {
         Position = Content.Length;
     }
 
-    public int Clear(int index, int count) {
-        if (index < 0) {
-            return 0;
-        }
-
-        if (index > Content.Length - 1) {
-            return 0;
-        }
-
-        var length = Content.Length;
-        Content = Content.Remove(Math.Max(0, index), Math.Min(count, Content.Length - index));
-        return Math.Max(length - Content.Length, 0);
+    public void Clear(int index, int count, bool moveBack = false) {
+        if (index > Content.Length - 1) return;
+        if (count <= 0) return;
+        if (index < 0) index = 0;
+        if (count > Content.Length - index) count = Content.Length - index;
+        Content = Content.Remove(index, count);
+        if (moveBack && Position > 0) Position--;
+        if (Position > Content.Length) Position = Content.Length;
     }
 
     private int MoveToPosition(int position, bool movingLeft) {
-        if (position <= 0) {
-            return 0;
-        }
-
-        if (position >= Content.Length) {
-            return Content.Length;
-        }
-
+        if (position <= 0) return 0;
+        if (position >= Content.Length) return Content.Length;
         var indices = StringInfo.ParseCombiningCharacters(Content).Cast<int?>();
 
         return (movingLeft

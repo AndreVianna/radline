@@ -1,6 +1,8 @@
 namespace RadLine;
 
 public sealed class KeyBindings {
+    public static KeyBindings Default { get; } = new KeyBindings().AddDefault();
+
     private readonly Dictionary<KeyBinding, Func<TextEditorCommand>> _bindings = new(new KeyBindingComparer());
     private readonly Dictionary<Type, KeyBinding> _bindingLookup = [];
 

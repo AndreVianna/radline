@@ -1,6 +1,8 @@
 namespace RadLine;
 
-public sealed class TextEditor : IHighlighterAccessor {
+public sealed class TextEditor
+    : IHighlighterAccessor,
+      ITextEditor {
     private readonly IServiceProvider? _provider;
     private readonly IAnsiConsole _console;
     private readonly TextEditorRenderer _renderer;
@@ -14,10 +16,10 @@ public sealed class TextEditor : IHighlighterAccessor {
     public TextEditorState State { get; private set; }
     public string ErrorMessage { get; private set; } = string.Empty;
 
-    public uint PageSize { get; init; } = 10;
+    public uint PageSize { get; }
     public uint MaximumNumberOfLines { get; init; }
     public string Text { get; init; } = string.Empty;
-    public IPromptPrefix PromptPrefix { get; init; } = new PromptPrefix("[yellow]>[/]");
+    public IPromptPrefix PromptPrefix { get; init; } = new DefaultPromptPrefix();
     public ITextCompletion? Completion { get; init; }
     public IHighlighter? Highlighter { get; init; }
     public Func<string, ValidationResult>? Validator { get; init; }
@@ -26,12 +28,12 @@ public sealed class TextEditor : IHighlighterAccessor {
     public TextEditor(IAnsiConsole? terminal = null, IInputSource? source = null, IServiceProvider? provider = null) {
         _console = terminal ?? AnsiConsole.Console;
         _provider = provider;
+        PageSize = (uint)_console.Profile.Height;
         _renderer = new(_console, this);
         _history = new();
         _input = new(source ?? new DefaultInputSource(_console));
 
-        KeyBindings = new();
-        KeyBindings.AddDefault();
+        KeyBindings = KeyBindings.Default;
     }
 
     public static bool IsSupported(IAnsiConsole console) => console is null
@@ -68,44 +70,47 @@ public sealed class TextEditor : IHighlighterAccessor {
                 }
 
                 _renderer.RenderLine(content, cursorPosition: 0);
-                while (content.MoveDown()) {
-                    _console.Cursor.MoveDown();
-                }
+                while (content.MoveDown()) _console.Cursor.MoveDown();
                 _console.WriteLine();
-                if (!content.IsEmpty) {
-                    _history.Add(content.GetBuffers());
-                }
+                if (!content.IsEmpty) _history.Add(content.GetBuffers());
                 return content.Text;
-            case SubmitAction.PreviousHistory:
-                if (_history.MovePrevious(content)) {
-                    SetContent(content, _history.Current);
-                }
-
-                break;
-            case SubmitAction.NextHistory:
-                if (_history.MoveNext()) {
-                    SetContent(content, _history.Current);
-                }
-
-                break;
             case SubmitAction.NewLine:
-                if (!IsMultiLine || (MaximumNumberOfLines > 1 && content.LineCount >= MaximumNumberOfLines)) {
+                if (!IsMultiLine || (MaximumNumberOfLines > 1 && content.LineCount >= MaximumNumberOfLines)) break;
+                var end = content.Buffer.Content[content.Buffer.Position..];
+                content.Buffer.Clear(content.Buffer.Position, content.Buffer.Length);
+                if (content.IsLastLine) content.AppendLine(end);
+                else content.InsertLine(content.LineIndex + 1, end);
+                content.MoveDown();
+                content.Buffer.SetPosition(0);
+                Refresh(content);
+                break;
+            case SubmitAction.Delete:
+                if (context.Buffer.Position >= content.Buffer.Length) {
+                    if (content.IsLastLine) break;
+                    content.Buffer.Insert(content.GetBufferAt(content.LineIndex + 1).Content);
+                    content.RemoveLine(content.LineIndex + 1);
+                    Refresh(content, 1);
                     break;
                 }
-
-                if (content.IsLastLine) {
-                    content.AddLine();
+                context.Buffer.Clear(context.Buffer.Position, 1);
+                RenderLine(content);
+                break;
+            case SubmitAction.Backspace:
+                if (context.Buffer.Position <= 0) {
+                    if (content.IsFirstLine) break;
+                    MoveUp(content);
+                    content.Buffer.MoveLineEnd();
+                    content.Buffer.Insert(content.GetBufferAt(content.LineIndex + 1).Content);
+                    content.RemoveLine(content.LineIndex + 1);
+                    Refresh(content, 1);
+                    break;
                 }
-
-                var builder = new StringBuilder();
-                builder.Append("\u001b[?25l");
-                _renderer.LineBuilder.MoveDown(builder, content);
-                _renderer.LineBuilder.BuildRefresh(builder, content);
-                builder.Append("\u001b[?25h");
-                _console.WriteAnsi(builder.ToString());
+                context.Buffer.Clear(context.Buffer.Position - 1, 1, true);
+                RenderLine(content);
                 break;
             case SubmitAction.MoveLeft:
-                if (context.Buffer.Position <= 0 && !content.IsFirstLine) {
+                if (context.Buffer.Position <= 0) {
+                    if (content.IsFirstLine) break;
                     MoveUp(content);
                     content.Buffer.MoveLineEnd();
                     RenderLine(content, content.Buffer.Position);
@@ -115,7 +120,8 @@ public sealed class TextEditor : IHighlighterAccessor {
                 RenderLine(content);
                 break;
             case SubmitAction.MoveRight:
-                if (context.Buffer.Position >= content.Buffer.Length && !content.IsFirstLine) {
+                if (context.Buffer.Position >= content.Buffer.Length) {
+                    if (content.IsLastLine) break;
                     MoveDown(content);
                     content.Buffer.MoveLineStart();
                     RenderLine(content, 0);
@@ -180,6 +186,12 @@ public sealed class TextEditor : IHighlighterAccessor {
             case SubmitAction.MoveBottom:
                 if (IsMultiLine) MoveBottom(content);
                 break;
+            case SubmitAction.PreviousHistory:
+                if (_history.MovePrevious(content)) SetContent(content, [.. _history.Current?.Select(l => l.Content) ?? []]);
+                break;
+            case SubmitAction.NextHistory:
+                if (_history.MoveNext()) SetContent(content, [.. _history.Current?.Select(l => l.Content) ?? []]);
+                break;
             default:
                 throw new InvalidOperationException("Unknown action.");
         }
@@ -194,32 +206,28 @@ public sealed class TextEditor : IHighlighterAccessor {
 
     private async Task<SubmitAction> ReadInput(LineBufferContext context, TextEditorContent content, CancellationToken cancellationToken) {
         while (true) {
-            if (cancellationToken.IsCancellationRequested) {
-                return SubmitAction.Cancel;
-            }
+            if (cancellationToken.IsCancellationRequested) return SubmitAction.Cancel;
 
-            var command = default(TextEditorCommand);
             var key = await _input.ReadKey(IsMultiLine, cancellationToken).ConfigureAwait(false);
-            if (key != null) {
-                command = key.Value.KeyChar != 0 && !char.IsControl(key.Value.KeyChar)
+            var command = key == null
+                ? null
+                : key.Value.KeyChar != 0 && !char.IsControl(key.Value.KeyChar)
                     ? new InsertCommand(key.Value.KeyChar)
                     : KeyBindings.GetCommand(key.Value.Key, key.Value.Modifiers);
-            }
 
-            if (command != null) {
-                context.Execute(command);
-            }
-
-            if (context.Result != null) {
-                return context.Result.Value;
-            }
-
+            if (command != null) context.Execute(command);
+            if (context.Result != null) return context.Result.Value;
             RenderLine(content);
         }
     }
 
     private void RenderLine(TextEditorContent content, int? cursorPosition = null) {
         _renderer.RenderLine(content, cursorPosition);
+        LineDecorationRenderer?.RenderLineDecoration(content.Buffer);
+    }
+
+    private void Refresh(TextEditorContent content, int trailCount = 0) {
+        _renderer.Refresh(content, trailCount);
         LineDecorationRenderer?.RenderLineDecoration(content.Buffer);
     }
 
@@ -266,7 +274,7 @@ public sealed class TextEditor : IHighlighterAccessor {
             var position = content.Buffer.Position;
             if (content.LineCount > _console.Profile.Height) {
                 action();
-                _renderer.Refresh(content);
+                Refresh(content);
             }
             else {
                 _renderer.RenderLine(content, 0);
@@ -278,28 +286,9 @@ public sealed class TextEditor : IHighlighterAccessor {
         }
     }
 
-    private void SetContent(TextEditorContent content, IList<LineBuffer>? lines) {
-        if (lines == null || lines.Count == 0) {
-            return;
-        }
-
+    private void SetContent(TextEditorContent content, ICollection<string?> lines) {
         var builder = new StringBuilder();
-        LineBuilder.BuildClear(builder, content);
-        content.RemoveAllLines();
-        builder.Append("\u001b[?25l");
-
-        var first = true;
-        foreach (var line in lines) {
-            content.AddLine(line.Content);
-            if (!first) {
-                _renderer.LineBuilder.MoveDown(builder, content);
-            }
-
-            first = false;
-        }
-
-        _renderer.LineBuilder.BuildRefresh(builder, content);
-        builder.Append("\u001b[?25h");
+        _renderer.ContentHandler.SetContent(builder, content, lines);
         _console.WriteAnsi(builder.ToString());
     }
 }

@@ -128,6 +128,7 @@ public sealed class TextEditorTests {
         var result = await editor.ReadText(CancellationToken.None);
 
         // Then
+        result.ShouldBe($"Patrik{Environment.NewLine}Svensson");
         editor.History.Count.ShouldBe(1);
     }
 }

@@ -3,19 +3,8 @@ namespace RadLine.Internal;
 internal sealed class TextEditorContent : ITextEditorContent {
     public TextEditorContent(IPromptPrefix promptPrefix, string text) {
         _lines = [];
-        LineIndex = 0;
-
         PromptPrefix = promptPrefix ?? throw new ArgumentNullException(nameof(promptPrefix));
-
-        // Add all lines
-        foreach (var line in text.NormalizeNewLines().Split(['\n'])) {
-            _lines.Add(new(line));
-        }
-
-        // No lines?
-        if (_lines.Count == 0) {
-            _lines.Add(new());
-        }
+        SetContent(text.NormalizeNewLines().Split(['\n']).Select(l => new LineBuffer(l)), 0);
     }
 
     private readonly List<LineBuffer> _lines;
@@ -40,18 +29,12 @@ internal sealed class TextEditorContent : ITextEditorContent {
 
     public IList<LineBuffer> GetBuffers() => _lines;
 
-    public bool SetContent(IList<LineBuffer> buffers, int lineIndex) {
+    private void SetContent(IEnumerable<LineBuffer> buffers, int lineIndex) {
         ArgumentNullException.ThrowIfNull(buffers);
-
-        if (buffers.Count == 0) {
-            return false;
-        }
-
         _lines.Clear();
         _lines.AddRange(buffers);
+        if (_lines.Count == 0) _lines.Add(new());
         LineIndex = lineIndex;
-
-        return true;
     }
 
     public void Move(int line) => LineIndex = Math.Max(0, Math.Min(line, LineCount - 1));
@@ -68,13 +51,46 @@ internal sealed class TextEditorContent : ITextEditorContent {
         return true;
     }
 
-    public void RemoveAllLines() {
+    public void Clear() {
         _lines.Clear();
-        LineIndex = -1;
+        LineIndex = 0;
     }
 
-    public void AddLine(string? content = null) {
+    public void SetContent(ICollection<string?>? content = null) {
+        var line = LineIndex;
+        var position = Buffer.Position;
+        Clear();
+        AppendLines(content ?? [string.Empty]);
+        if (line < LineCount) Move(line);
+        if (position < Buffer.Length) Buffer.SetPosition(position);
+    }
+
+    public void AppendLines(ICollection<string?> content) {
+        _lines.AddRange(content.Select(l => new LineBuffer(l)));
+        LineIndex += content.Count;
+    }
+
+    public void AppendLine(string? content = null) {
         _lines.Add(new(content));
         LineIndex++;
+    }
+
+    public void InsertLines(int index, ICollection<string?> content) {
+        if (index < 0) index = 0;
+        if (index > _lines.Count) index = _lines.Count;
+        _lines.InsertRange(index, content.Select(l => new LineBuffer(l)));
+        if (index <= LineIndex) LineIndex += content.Count;
+    }
+
+    public void InsertLine(int index, string? content = null) {
+        if (index < 0) index = 0;
+        if (index > _lines.Count) index = _lines.Count;
+        _lines.Insert(index, new(content));
+        if (index <= LineIndex) LineIndex++;
+    }
+
+    public void RemoveLine(int index) {
+        _lines.RemoveAt(index);
+        if (index <= LineIndex) LineIndex--;
     }
 }

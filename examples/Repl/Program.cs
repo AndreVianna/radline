@@ -13,7 +13,7 @@ public static class Program {
 
         // Create editor
         var editor = new TextEditor() {
-            PromptPrefix = new PromptPrefix(">", "."),
+            PromptPrefix = new DefaultPromptPrefix(">", "."),
             Highlighter = new JavaScriptHighlighter(),
         };
 

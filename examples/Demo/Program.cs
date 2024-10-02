@@ -4,8 +4,9 @@ if (!TextEditor.IsSupported(AnsiConsole.Console)) {
 
 // Create editor
 var editor = new TextEditor() {
-    Text = "Hello, and welcome to RadLine!\nPress SHIFT+ENTER to insert a new line\nPress ENTER to submit\nLine 4\nLine 5\nLine 6\nLine 7",
+    Text = "Hello, and welcome to RadLine!\nPress SHIFT+ENTER to insert a new line\nPress ENTER to submit",
     PromptPrefix = new LineNumberPromptPrefix(new(foreground: Color.Yellow, background: Color.Black)),
+    //    MaximumNumberOfLines = 5,
     Completion = new TestCompletion(),
     Highlighter = new WordHighlighter()
         .AddWord("git", new(foreground: Color.Yellow))
@@ -34,7 +35,9 @@ var result = string.Empty;
 while (editor.State is TextEditorState.Active) {
     result = await editor.ReadText(CancellationToken.None);
     if (editor.State != TextEditorState.Invalid) continue;
-    AnsiConsole.WriteLine($"[red]{editor.ErrorMessage}[/]");
+    AnsiConsole.WriteLine(editor.ErrorMessage);
+    AnsiConsole.WriteLine("[yellow]Please try again.[/]");
+    AnsiConsole.WriteLine();
     editor.ResetState();
 }
 

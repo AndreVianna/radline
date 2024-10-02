@@ -1,7 +1,7 @@
 namespace RadLine;
 
 public static class KeyBindingsExtensions {
-    public static void AddDefault(this KeyBindings bindings) {
+    public static KeyBindings AddDefault(this KeyBindings bindings) {
         bindings.Add(ConsoleKey.Tab, () => new AutoCompleteCommand(AutoComplete.Next));
         bindings.Add(ConsoleKey.Tab, ConsoleModifiers.Shift, () => new AutoCompleteCommand(AutoComplete.Previous));
 
@@ -30,6 +30,8 @@ public static class KeyBindingsExtensions {
         bindings.Add<CancelCommand>(ConsoleKey.Escape);
         bindings.Add<SubmitCommand>(ConsoleKey.Enter);
         bindings.Add<NewLineCommand>(ConsoleKey.Enter, ConsoleModifiers.Shift);
+
+        return bindings;
     }
 
     public static void Add<TCommand>(this KeyBindings bindings, ConsoleKey key, ConsoleModifiers? modifiers = null)
